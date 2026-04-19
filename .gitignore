@@ -1,0 +1,15 @@
+*.pyc
+__pycache__/
+.env
+db.sqlite3
+.venv/
+venv/
+node_modules/
+.DS_Store
+*.log
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.docker-compose.yml.swp

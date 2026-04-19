@@ -1,0 +1,45 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vulnai
+          POSTGRES_PASSWORD: vulnai
+          POSTGRES_DB: vulnai
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://vulnai:vulnai@localhost:5432/vulnai
+      DJANGO_SECRET_KEY: ci-only-not-real
+      DJANGO_DEBUG: "True"
+      REDIS_URL: redis://localhost:6379/0
+      LLM_API_KEY: fake-for-ci
+      LLM_MODEL: claude-3-sonnet-20240229
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python manage.py migrate
+      - run: python manage.py test
