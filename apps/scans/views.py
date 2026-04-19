@@ -38,8 +38,16 @@ class ScanViewSet(viewsets.ModelViewSet):
                 
             scan = serializer.save()
             
-            # Dispatch Celery task
-            run_scan_task.delay(str(scan.id))
+            # Dispatch scan
+            if settings.REDIS_URL:
+                run_scan_task.delay(str(scan.id))
+            else:
+                # Fallback for local dev without Redis: run in separate thread
+                # This prevents the HTTP worker from blocking while the LLM runs
+                import threading
+                thread = threading.Thread(target=run_scan_task, args=(str(scan.id),))
+                thread.daemon = True
+                thread.start()
             
             return Response(
                 {"scan_id": str(scan.id), "status": scan.status},

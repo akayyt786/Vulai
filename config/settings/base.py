@@ -11,7 +11,9 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0', cast=Csv())
+# Allow specific ports for local testing
+ALLOWED_HOSTS += ['localhost:8080', '127.0.0.1:8080', 'localhost:3000', '127.0.0.1:3000']
 
 # Application definition
 INSTALLED_APPS = [
@@ -71,17 +73,28 @@ ASGI_APPLICATION = 'config.asgi.application'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
 ]
+CORS_ALLOW_ALL_ORIGINS = True # Temporary for troubleshooting bridge
 
-# Channel Layers (Redis)
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+# Channel Layers
+REDIS_URL = config('REDIS_URL', default=None)
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [REDIS_URL],
+            },
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
 
 # Database - SQLite for Safe Native Run
 DATABASES = {
@@ -92,8 +105,6 @@ DATABASES = {
 }
 
 # Celery Configuration
-REDIS_URL = config('REDIS_URL', default=None)
-
 if REDIS_URL:
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL

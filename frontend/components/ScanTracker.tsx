@@ -16,8 +16,7 @@ interface Step {
 export const ScanTracker = ({ scanId }: { scanId: string }) => {
   const [steps, setSteps] = useState<Step[]>([]);
   const [statusText, setStatusText] = useState("AWAITING COMMAND INITIALIZATION...");
-  
-  const wsUrl = scanId ? `ws://${window.location.host}/ws/scans/${scanId}/` : null;
+  const wsUrl = scanId ? `ws://${window.location.hostname}:8080/ws/scans/${scanId}/` : null;
   const { data, status } = useWebSocket(wsUrl);
 
   useEffect(() => {

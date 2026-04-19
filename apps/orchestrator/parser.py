@@ -4,20 +4,20 @@ from utils.error_logger import log_error
 
 def parse_llm_response(raw_response):
     """
-    Parses LLM JSON response. Strips markdown fences and attempts basic repair.
+    Parses LLM JSON response. Extracts the first JSON object found.
     """
     if not raw_response:
         return {"action": "pivot", "reasoning": "Empty response from LLM"}
 
-    # Strip markdown fences if present
-    # regex matches: ```json ... ``` or just ``` ... ```
-    cleaned = raw_response.strip()
-    fence_pattern = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL | re.IGNORECASE)
-    match = fence_pattern.match(cleaned)
-    if match:
-        cleaned = match.group(1).strip()
-    
+    # Use regex to find the first '{' and the last '}'
+    # This effectively strips <think> blocks or conversational filler
     try:
+        match = re.search(r"(\{.*\})", raw_response, re.DOTALL)
+        if not match:
+            log_error("apps.orchestrator.parser", "LLMNoJsonError", "No JSON object found in response", {"raw": raw_response})
+            return {"action": "pivot", "reasoning": "No valid JSON found"}
+            
+        cleaned = match.group(1).strip()
         data = json.loads(cleaned)
         
         # Basic validation of action field
@@ -26,13 +26,11 @@ def parse_llm_response(raw_response):
             return {"action": "pivot", "reasoning": "Missing action field"}
             
         return data
-    except json.JSONDecodeError as e:
-        # Attempt simple repairs like fixing trailing commas or missing quotes (very basic)
+    except (json.JSONDecodeError, AttributeError) as e:
         log_error(
             "apps.orchestrator.parser", "LLMParseError",
             f"Failed to parse LLM JSON: {str(e)}",
             {"raw": raw_response},
             exc=e
         )
-        # Return a pivot action to avoid crashing the scan
         return {"action": "pivot", "reasoning": "JSON parse failed, forcing pivot"}
