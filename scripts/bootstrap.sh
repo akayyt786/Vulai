@@ -5,9 +5,11 @@ echo "-----------------------------------"
 echo "VulnAI Phase 8 — Tool Bootstrap"
 echo "-----------------------------------"
 
-# 1. Database Migrations
-echo "Running database migrations..."
-python3 manage.py migrate
+# 1. Database Migrations (Skip if SKIP_MIGRATIONS is set, e.g. during Docker build)
+if [ "$SKIP_MIGRATIONS" != "1" ]; then
+    echo "Running database migrations..."
+    python3 manage.py migrate || echo "Migration failed (DB might be offline during build), skipping..."
+fi
 
 # 2. Update Nuclei Templates
 if command -v nuclei &> /dev/null; then

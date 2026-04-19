@@ -3,19 +3,21 @@ FROM python:3.11-slim
 # Install system dependencies and security tools
 RUN apt-get update && apt-get install -y \
     nmap \
-    nikto \
     whatweb \
     git \
     curl \
     wget \
+    gnupg \
     sudo \
     golang \
-    feroxbuster \
-    gobuster \
     hydra \
     wafw00f \
     dnsrecon \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Nikto (source)
+RUN git clone https://github.com/sullo/nikto.git /opt/nikto \
+    && ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto
 
 # Set Go environment and install Go-based tools
 ENV GOPATH=/root/go
@@ -29,7 +31,9 @@ RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && 
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install github.com/jaeles-project/gospider@latest && \
     go install github.com/zricethezav/gitleaks/v8@latest && \
-    go install github.com/s0md3v/Arjun@latest
+    go install github.com/s0md3v/Arjun@latest && \
+    go install github.com/OJ/gobuster/v3@latest && \
+    go install github.com/epi052/feroxbuster/v2/cmd/feroxbuster@latest
 
 WORKDIR /app
 
