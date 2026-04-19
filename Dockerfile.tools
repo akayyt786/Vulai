@@ -46,7 +46,6 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     wafw00f \
     dnsrecon \
     commix \
-    corsy \
     semgrep \
     bandit \
     checkov
