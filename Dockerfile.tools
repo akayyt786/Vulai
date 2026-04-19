@@ -1,6 +1,6 @@
 FROM debian:12-slim
 
-# Install system dependencies
+# Install system dependencies (build-essential provides gcc for CGO)
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -13,20 +13,23 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go 1.22.2
+# Install Go 1.22.2 (Debian 12 ships 1.19, too old for projectdiscovery tools)
 RUN wget -qO- https://go.dev/dl/go1.22.2.linux-amd64.tar.gz | tar -C /usr/local -xzf -
 
+# Install Trivy from official Aqua Security repo
 RUN wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null \
     && echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb bookworm main" | tee -a /etc/apt/sources.list.d/trivy.list \
     && apt-get update && apt-get install -y trivy && rm -rf /var/lib/apt/lists/*
 
-# Install Nikto (Clone from source for reliability)
+# Install Nikto from source (not in debian-slim repos)
 RUN git clone https://github.com/sullo/nikto.git /opt/nikto \
     && ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto
 
 # Install Go-based tools
+# CGO_ENABLED=1 is REQUIRED for trufflehog (depends on go-tree-sitter which uses CGO)
 ENV GOPATH=/root/go
 ENV PATH="/usr/local/go/bin:${GOPATH}/bin:${PATH}"
+ENV CGO_ENABLED=1
 RUN go install github.com/projectdiscovery/katana/cmd/katana@latest \
     && go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest \
     && go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest \
@@ -34,10 +37,9 @@ RUN go install github.com/projectdiscovery/katana/cmd/katana@latest \
     && go install github.com/hahwul/dalfox/v2@latest \
     && go install github.com/ffuf/ffuf@latest \
     && go install github.com/trufflesecurity/trufflehog/v3@latest \
-    && go install github.com/zricethezav/gitleaks/v8@latest \
-    && go install github.com/epi052/feroxbuster/v2/cmd/feroxbuster@latest
+    && go install github.com/zricethezav/gitleaks/v8@latest
 
-# Install Python-based tools
+# Install Python-based tools (arjun is Python, NOT Go)
 RUN pip3 install --no-cache-dir --break-system-packages \
     arjun \
     sslyze \
@@ -57,8 +59,6 @@ WORKDIR /home/vulnai
 
 # Set up wordlists directory
 RUN mkdir -p /home/vulnai/wordlists
-# Note: In a real prod environment, we'd copy large wordlists here or mount them.
-# For now, we'll create a tiny one for testing.
 RUN echo "admin\nconfig\nlogin\nsetup\n.env" > /home/vulnai/wordlists/common.txt
 
 ENTRYPOINT ["/bin/sh", "-c"]
