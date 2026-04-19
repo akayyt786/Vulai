@@ -60,6 +60,7 @@ def validate_repo(repo_url):
     return True
 
 def validate_file(file_content):
+    from django.core.exceptions import ValidationError
     if not file_content:
         raise ValidationError("File content cannot be empty.")
     
