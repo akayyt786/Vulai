@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     hydra \
     wafw00f \
     dnsrecon \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Go 1.22.2 (Debian 12 provides 1.19, which is too old for new projectdiscovery tools)
