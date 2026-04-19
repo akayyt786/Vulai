@@ -37,8 +37,7 @@ RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && 
     go install github.com/hahwul/dalfox/v2@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install github.com/zricethezav/gitleaks/v8@latest && \
-    go install github.com/OJ/gobuster/v3@latest && \
-    go install github.com/trufflesecurity/trufflehog/v3@latest
+    go install github.com/OJ/gobuster/v3@latest
 
 WORKDIR /app
 
