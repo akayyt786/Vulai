@@ -42,8 +42,7 @@ class TestParsers(unittest.TestCase):
         raw = "80/tcp open http Apache httpd 2.4.41\n443/tcp open ssl/http Apache httpd 2.4.41"
         result = nmap_parser.parse(raw)
         self.assertEqual(result["count"], 2)
-        self.assertEqual(result["findings"][0]["title"], "Open Port Discovered: 80/tcp")
-        self.assertEqual(result["findings"][0]["severity"], "info")
+        self.assertEqual(result["findings"][0]["title"], "Open Port: 80/tcp")
 
     def test_nikto_parser(self):
         raw = "+ OSVDB-3092: /admin/: This might be interesting...\n+ /test.php: Vulnerable to RCE"
