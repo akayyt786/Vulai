@@ -7,6 +7,8 @@ from .parser import parse_llm_response
 from .context_manager import build_context
 from .prompts import SYSTEM_PROMPT, build_user_prompt
 from .chain_analyser import analyse_chains
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from utils.error_logger import log_error
 
 class OrchestratorAgent:
@@ -22,6 +24,7 @@ class OrchestratorAgent:
         scan = Scan.objects.get(id=self.scan_id)
         scan.status = 'running'
         scan.save()
+        self._broadcast_status(scan, "Scanning initiated")
 
         step_count = 0
         while step_count < self.max_steps:
@@ -67,6 +70,8 @@ class OrchestratorAgent:
                         scan.surfaces_covered.append(surface)
                         scan.save()
                     
+                    self._broadcast_step(step)
+                    
                 elif action["action"] == "install_tool":
                     tool = action.get("tool")
                     install_tool(tool)
@@ -95,6 +100,7 @@ class OrchestratorAgent:
 
             except Exception as e:
                 log_error("apps.orchestrator.agent", "AgentError", str(e), {"scan_id": self.scan_id, "step": step_count}, exc=e)
+                self._broadcast_status(scan, f"Agent Error: {str(e)}")
                 # Fail gracefully after 3 consecutive errors?
                 break
 
@@ -104,6 +110,23 @@ class OrchestratorAgent:
         
         # Final chain analysis
         analyse_chains(self.scan_id)
+        
+        # Broadcast completion
+        self._broadcast_status(scan, "Scan complete.")
+        self._broadcast_completion(scan)
+
+    def _broadcast_completion(self, scan):
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'scan_{scan.id}',
+            {
+                'type': 'scan_update',
+                'message': {
+                    'type': 'scan_complete',
+                    'status': 'done'
+                }
+            }
+        )
 
     def _process_findings(self, step, parsed_data):
         """
@@ -127,3 +150,34 @@ class OrchestratorAgent:
         
         step.findings_count = len(findings_list)
         step.save()
+
+    def _broadcast_status(self, scan, message):
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'scan_{scan.id}',
+            {
+                'type': 'scan_update',
+                'message': {
+                    'type': 'status',
+                    'status': scan.status,
+                    'text': message
+                }
+            }
+        )
+
+    def _broadcast_step(self, step):
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'scan_{str(step.scan.id)}',
+            {
+                'type': 'scan_update',
+                'message': {
+                    'type': 'step',
+                    'id': str(step.id),
+                    'tool': step.tool_name,
+                    'reasoning': step.ai_reasoning,
+                    'findings_count': step.findings_count,
+                    'status': 'done'
+                }
+            }
+        )

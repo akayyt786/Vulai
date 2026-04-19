@@ -15,6 +15,7 @@ ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', ca
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -24,6 +25,8 @@ INSTALLED_APPS = [
     
     # Third-party apps
     'rest_framework',
+    'channels',
+    'corsheaders',
     
     # Local apps
     'apps.scans',
@@ -33,6 +36,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -61,17 +65,48 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
-# Database
-# Use dj_database_url if needed, but for now standard postgres
-import dj_database_url
-DATABASES = {
-    'default': config(
-        'DATABASE_URL',
-        default='postgres://vulnai:vulnai@db:5432/vulnai',
-        cast=dj_database_url.parse
-    )
+# CORS Settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Channel Layers (Redis)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
 }
+
+# Database - SQLite for Safe Native Run
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+# Celery Configuration
+REDIS_URL = config('REDIS_URL', default=None)
+
+if REDIS_URL:
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
+    CELERY_TASK_ALWAYS_EAGER = False
+else:
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
+    CELERY_TASK_ALWAYS_EAGER = True
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -102,14 +137,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Celery Configuration
-CELERY_BROKER_URL = config('REDIS_URL', default='redis://redis:6379/0')
-CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://redis:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
-
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
@@ -122,6 +149,7 @@ REST_FRAMEWORK = {
 }
 
 # VulnAI Custom Settings
+SAFE_SIMULATION_MODE = config('SAFE_SIMULATION_MODE', default=True, cast=bool)
 LLM_API_KEY = config('LLM_API_KEY', default='')
 LLM_BASE_URL = config('LLM_BASE_URL', default='https://api.anthropic.com/v1')
 LLM_MODEL = config('LLM_MODEL', default='claude-3-sonnet-20240229')
@@ -130,6 +158,7 @@ MAX_SCAN_STEPS = config('MAX_SCAN_STEPS', default=50, cast=int)
 MAX_SCAN_LAYERS = config('MAX_SCAN_LAYERS', default=6, cast=int)
 TOOL_TIMEOUT_SECONDS = config('TOOL_TIMEOUT_SECONDS', default=300, cast=int)
 MAX_CONCURRENT_SCANS = config('MAX_CONCURRENT_SCANS', default=3, cast=int)
+WEBHOOK_API_KEY = config('WEBHOOK_API_KEY', default='vulnai_secret_default_key')
 ALLOW_AUTO_INSTALL = config('ALLOW_AUTO_INSTALL', default=True, cast=bool)
 REQUIRE_CONSENT = config('REQUIRE_CONSENT', default=True, cast=bool)
 ALLOW_INTERNAL_SCAN = config('ALLOW_INTERNAL_SCAN', default=False, cast=bool)

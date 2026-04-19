@@ -13,6 +13,12 @@ def install_tool(tool_name):
             f"AI tried to install unlisted tool: {tool_name}"
         )
         return False
+    # SAFE SIMULATION MODE Logic
+    from django.conf import settings
+    if getattr(settings, 'SAFE_SIMULATION_MODE', False):
+        log_error("apps.tools.installer", "SimulationBlock", f"Blocked install of {tool_name} due to Simulation Mode")
+        return True # Pretend it's fine
+    
 
     tool_config = TOOL_REGISTRY[tool_name]
     

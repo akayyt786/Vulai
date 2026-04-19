@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, views
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.shortcuts import get_object_ some
+from django.shortcuts import get_object_or_404
 from .models import Scan, Report
 from .serializers import ScanCreateSerializer, ScanStatusSerializer, ScanDetailSerializer
 from apps.reports.serializers import ReportSerializer

@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --primary: #ffffff;
+  --secondary: #a1a1a1;
+  --accent: #3b82f6;
+  --danger: #ef4444;
+  --success: #10b981;
+  --border: #262626;
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+.tech-card {
+  background: #121212;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.tech-card:hover {
+  border-color: #404040;
+}
+
+.glitch-text {
+  position: relative;
+  display: inline-block;
+}
+
+/* Minimalist techie aesthetics */
+.scan-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  width: 100%;
+  animation: scan 2s infinite linear;
+}
+
+@keyframes scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(1000%); }
+}

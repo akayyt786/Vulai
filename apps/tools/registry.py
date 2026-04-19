@@ -56,7 +56,7 @@ TOOL_REGISTRY = {
         "default_args": ""
     },
     "sslyze": {
-        "description": "SSL/TLS configuration analysis",
+        "description": "Fast and powerful SSL/TLS scanner",
         "install_method": "pip",
         "install_command": "pip install sslyze",
         "check_command": "sslyze --version",
@@ -80,7 +80,7 @@ TOOL_REGISTRY = {
         "default_args": "-mc 200,301,302 -w /usr/share/wordlists/dirb/common.txt -u"
     },
     "gobuster": {
-        "description": "Directory brute-force",
+        "description": "Directory and DNS brute-forcing tool",
         "install_method": "go",
         "install_command": "go install github.com/OJ/gobuster/v3@latest",
         "check_command": "gobuster version",
@@ -91,7 +91,7 @@ TOOL_REGISTRY = {
         "default_args": "dir -w /usr/share/wordlists/dirb/common.txt -u"
     },
     "arjun": {
-        "description": "HTTP parameter discovery",
+        "description": "HTTP parameter discovery suite",
         "install_method": "pip",
         "install_command": "pip install arjun",
         "check_command": "arjun --version",
@@ -102,7 +102,7 @@ TOOL_REGISTRY = {
         "default_args": "-u"
     },
     "katana": {
-        "description": "Web crawler",
+        "description": "Advanced web crawler and spider",
         "install_method": "go",
         "install_command": "go install github.com/projectdiscovery/katana/cmd/katana@latest",
         "check_command": "katana --version",
@@ -148,7 +148,7 @@ TOOL_REGISTRY = {
         "default_args": "--batch --risk=1 --level=3 --random-agent -u"
     },
     "dalfox": {
-        "description": "XSS parameter analysis",
+        "description": "All-in-one XSS scanner and parameter analyzer",
         "install_method": "go",
         "install_command": "go install github.com/haithamaouati/dalfox@latest",
         "check_command": "dalfox version",
