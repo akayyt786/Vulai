@@ -30,6 +30,18 @@ export interface ScanStep {
   created_at: string;
 }
 
+export interface Report {
+  scan_id: string;
+  summary: string;
+  attack_narrative: string;
+  risk_score: number;
+  findings_count: Record<string, number>;
+  surfaces_tested: string[];
+  chains: any[];
+  findings: Finding[];
+  created_at: string;
+}
+
 export const api = {
   createScan: async (target: string, inputType: string = 'url') => {
     const response = await fetch(`${API_BASE_URL}/api/scans/`, {
@@ -41,26 +53,41 @@ export const api = {
         consent_confirmed: true
       })
     });
-    if (!response.ok) throw new Error('Failed to create scan');
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to create scan');
+    }
     return response.json();
   },
 
-  getScan: async (scanId: string) => {
+  getScan: async (scanId: string): Promise<Scan> => {
     const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/`);
     if (!response.ok) throw new Error('Failed to fetch scan');
     return response.json();
   },
 
-  getFindings: async (scanId: string) => {
+  getStatus: async (scanId: string) => {
+    const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/status/`);
+    if (!response.ok) throw new Error('Failed to fetch status');
+    return response.json();
+  },
+
+  getFindings: async (scanId: string): Promise<Finding[]> => {
     const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/`);
     if (!response.ok) throw new Error('Failed to fetch findings');
     const data = await response.json();
     return data.findings || [];
   },
 
-  getReport: async (scanId: string) => {
+  getReport: async (scanId: string): Promise<Report> => {
     const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/report/`);
     if (!response.ok) throw new Error('Report not ready');
+    return response.json();
+  },
+
+  getHealth: async () => {
+    const response = await fetch(`${API_BASE_URL}/api/health/`);
+    if (!response.ok) throw new Error('Health check failed');
     return response.json();
   }
 };
