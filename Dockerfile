@@ -24,12 +24,10 @@ ENV GOPATH=/root/go
 ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
-    go install github.com/projectdiscovery/amass/v3/...@latest && \
     go install github.com/ffuf/ffuf@latest && \
     go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
     go install github.com/haithamaouati/dalfox@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
-    go install github.com/jaeles-project/gospider@latest && \
     go install github.com/zricethezav/gitleaks/v8@latest && \
     go install github.com/s0md3v/Arjun@latest && \
     go install github.com/OJ/gobuster/v3@latest && \
