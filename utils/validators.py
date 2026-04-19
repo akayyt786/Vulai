@@ -59,39 +59,20 @@ def validate_repo(repo_url):
     
     return True
 
-def validate_file(file_content, filename=""):
-    """
-    Validates uploaded file content for Phase 4.
-    Ensures the file is text-based, within size limits, and safe to scan.
-    """
+def validate_file(file_content):
     if not file_content:
         raise ValidationError("File content cannot be empty.")
     
-    # 1. Enforce Size Limit (e.g., 5MB max for a single code file)
-    MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 
-    try:
-        content_bytes = file_content.encode('utf-8') if isinstance(file_content, str) else file_content
-        if len(content_bytes) > MAX_FILE_SIZE_BYTES:
-            raise ValidationError(f"File {filename} exceeds the maximum allowed size of 5MB.")
-    except Exception:
-        raise ValidationError("Error calculating file size.")
+    # Enforce 5MB limit
+    if len(file_content.encode('utf-8')) > 5 * 1024 * 1024:
+        raise ValidationError("File exceeds 5MB limit.")
 
-    # 2. Prevent Binary File Uploads
     try:
         if isinstance(file_content, bytes):
-            text_content = file_content.decode('utf-8')
+            file_content.decode('utf-8')
         else:
-            text_content = str(file_content)
-            # Encode and decode to catch hidden binary bytes
-            text_content.encode('utf-8').decode('utf-8')
+            str(file_content).encode('utf-8').decode('utf-8')
     except UnicodeDecodeError:
-        raise ValidationError("Invalid file format. Only text-based source code files are allowed.")
-
-    # 3. Basic heuristic to block shell bombs/massive minified files
-    lines = text_content.splitlines()
-    if len(lines) > 0:
-        avg_line_length = len(text_content) / len(lines)
-        if avg_line_length > 10000:
-            raise ValidationError("File rejected: Suspiciously long lines detected (e.g., minified code or shell bomb).")
+        raise ValidationError("Only text/source code files are allowed.")
 
     return True

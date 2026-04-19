@@ -44,6 +44,8 @@ class OrchestratorAgent:
                     surface = action.get("surface")
                     layer = action.get("layer")
                     
+                    self._broadcast_status(scan, f"Running {tool} on {surface}...")
+                    
                     # Execute tool
                     result = run_tool(tool, scan.input_value, extra_args=args, scan_id=self.scan_id)
                     
@@ -57,7 +59,7 @@ class OrchestratorAgent:
                         tool_args={"args": args},
                         raw_output=result.get("raw_output", ""),
                         parsed_output=result.get("parsed_output", {}),
-                        findings_count=0, # Will be updated if findings discovered
+                        findings_count=0,
                         ai_reasoning=action.get("reasoning", ""),
                         duration_ms=result.get("duration_ms", 0)
                     )
@@ -66,7 +68,7 @@ class OrchestratorAgent:
                     self._process_findings(step, result.get("parsed_output", {}))
                     
                     # Update scan state
-                    if surface not in scan.surfaces_covered:
+                    if surface and surface not in scan.surfaces_covered:
                         scan.surfaces_covered.append(surface)
                         scan.save()
                     
@@ -74,23 +76,31 @@ class OrchestratorAgent:
                     
                 elif action["action"] == "install_tool":
                     tool = action.get("tool")
+                    self._broadcast_status(scan, f"Installing required tool: {tool}")
                     install_tool(tool)
-                    # Don't increment step_count for installs? Or do? Let's say no.
                     continue
 
                 elif action["action"] == "done":
-                    break
+                    # Double check if everything is actually covered
+                    from .pivot_engine import determine_pivot
+                    pivot = determine_pivot(context, {})
+                    if pivot["strategy"] == "done":
+                        self._broadcast_status(scan, "All surfaces exhausted. Scan complete.")
+                        break
+                    else:
+                        self._broadcast_status(scan, "AI requested 'done' but surfaces remain. Forcing pivot.")
+                        action = {"action": "run_tool", "tool": "nmap", "surface": pivot["next_surface"], "layer": pivot["next_layer"], "reasoning": "Forced pivot due to premature termination request."}
+                        # Resubmit to loop logic or handle directly... 
+                        # For now, let's just let it loop again with the pivot context.
+                        continue
                 
                 elif action["action"] == "pivot":
-                    # Forcibly move to another surface if LLM is stuck/parsing failed
                     from .pivot_engine import determine_pivot
                     pivot = determine_pivot(context, {})
                     if pivot["strategy"] == "done":
                         break
-                    # We continue the loop, the next iteration will have the pivot info in context?
-                    # Actually, the pivot engine doesn't inject into LLM here, it just helps.
-                    # We'll rely on the LLM to eventually say 'done'.
-                    pass
+                    # The next iteration will pick up the context with "surfaces_covered" updated
+                    continue
 
                 step_count += 1
                 

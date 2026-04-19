@@ -26,11 +26,21 @@ def build_context(scan_id):
             last_step = steps.last()
             last_output = json.dumps(last_step.parsed_output)[:2000] # Limit size
             
+        # Calculate remaining surfaces for this layer and type
+        from .pivot_engine import ATTACK_SURFACE_MATRIX
+        matrix = ATTACK_SURFACE_MATRIX.get(scan.input_type, {})
+        all_surfaces = []
+        for layer_surfaces in matrix.values():
+            all_surfaces.extend(layer_surfaces)
+        
+        remaining = [s for s in all_surfaces if s not in scan.surfaces_covered]
+            
         context = {
             "input_type": scan.input_type,
             "input_value": scan.input_value,
             "current_layer": scan.current_layer,
             "surfaces_covered": scan.surfaces_covered,
+            "remaining_surfaces": remaining,
             "tools_run": tools_run,
             "findings_summary": findings_summary,
             "step_count": steps.count(),
