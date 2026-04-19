@@ -19,14 +19,16 @@ def calculate_risk_score(findings):
     count = 0
     
     for finding in findings:
-        severity = getattr(finding, 'severity', None) or finding.get('severity', 'info').lower()
-        cvss_score = getattr(finding, 'cvss_score', None) or finding.get('cvss_score')
-        
-        # Use existing CVSS score if available, otherwise use default weight
+        if isinstance(finding, dict):
+            severity = finding.get('severity', 'info').lower()
+            cvss_score = finding.get('cvss_score')
+        else:
+            severity = getattr(finding, 'severity', 'info').lower()
+            cvss_score = getattr(finding, 'cvss_score', None)
+            
+        score = weights.get(severity, 0.0)
         if cvss_score is not None:
             score = float(cvss_score)
-        else:
-            score = weights.get(severity, 0.0)
             
         total_score += score
         count += 1
@@ -39,8 +41,12 @@ def calculate_risk_score(findings):
     # to represent the total risk surface.
     findings_list = []
     for f in findings:
-        s = getattr(f, 'severity', None) or f.get('severity', 'info').lower()
-        v = getattr(f, 'cvss_score', None) or f.get('cvss_score')
+        if isinstance(f, dict):
+            s = f.get('severity', 'info').lower()
+            v = f.get('cvss_score')
+        else:
+            s = getattr(f, 'severity', 'info').lower()
+            v = getattr(f, 'cvss_score', None)
         findings_list.append(v if v is not None else weights.get(s, 0.0))
         
     findings_list.sort(reverse=True)

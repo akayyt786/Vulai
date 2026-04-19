@@ -1,22 +1,37 @@
 #!/bin/bash
 set -e
 
-echo "Starting VulnAI Tool Bootstrap..."
+echo "-----------------------------------"
+echo "VulnAI Phase 8 — Tool Bootstrap"
+echo "-----------------------------------"
 
-# 1. Update Nuclei Templates
+# 1. Database Migrations
+echo "Running database migrations..."
+python3 manage.py migrate
+
+# 2. Update Nuclei Templates
 if command -v nuclei &> /dev/null; then
     echo "Updating Nuclei templates..."
     nuclei -update-templates
 fi
 
-# 2. Check major tools
-TOOLS=("nmap" "nikto" "whatweb" "ffuf" "sqlmap" "nuclei" "subfinder")
+# 3. Check and verify major tools
+TOOLS=("nmap" "nikto" "whatweb" "ffuf" "sqlmap" "nuclei" "subfinder" "katana" "dalfox" "trivy")
+MISSING=0
+
 for tool in "${TOOLS[@]}"; do
     if command -v $tool &> /dev/null; then
         echo "[OK] $tool is installed."
     else
-        echo "[WARNING] $tool is NOT installed."
+        echo "[WARNING] $tool is NOT installed. Some scan layers may fail."
+        MISSING=$((MISSING+1))
     fi
 done
 
-echo "Bootstrap complete."
+echo "-----------------------------------"
+if [ $MISSING -eq 0 ]; then
+    echo "Bootstrap complete. Environment is HEALTHY."
+else
+    echo "Bootstrap complete with $MISSING warnings. Please install missing tools for full coverage."
+fi
+echo "-----------------------------------"
