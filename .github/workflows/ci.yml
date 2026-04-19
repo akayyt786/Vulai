@@ -1,11 +1,16 @@
-name: CI
+name: VulnAI CI/CD Pipeline
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  test:
+  backend-test:
+    name: Backend Tests
     runs-on: ubuntu-latest
-
+    
     services:
       postgres:
         image: postgres:16
@@ -13,6 +18,8 @@ jobs:
           POSTGRES_USER: vulnai
           POSTGRES_PASSWORD: vulnai
           POSTGRES_DB: vulnai
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -21,6 +28,8 @@ jobs:
 
       redis:
         image: redis:7
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -29,17 +38,72 @@ jobs:
 
     env:
       DATABASE_URL: postgres://vulnai:vulnai@localhost:5432/vulnai
-      DJANGO_SECRET_KEY: ci-only-not-real
-      DJANGO_DEBUG: "True"
       REDIS_URL: redis://localhost:6379/0
-      LLM_API_KEY: fake-for-ci
-      LLM_MODEL: claude-3-sonnet-20240229
+      DJANGO_SECRET_KEY: ci-test-key-not-for-production
+      DJANGO_DEBUG: "True"
+      LLM_API_KEY: fake-key-for-ci
+      LLM_MODEL: claude-sonnet-4-20250514
+      SAFE_SIMULATION_MODE: "True"
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - run: python manage.py migrate
-      - run: python manage.py test
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nmap
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Database Migrations
+        run: python manage.py migrate
+
+      - name: Run Master Test Suite
+        run: |
+          python manage.py test apps.tools apps.scans apps.orchestrator apps.reports -v 2
+
+  frontend-build:
+    name: Frontend Build Verification
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Verify Frontend Build
+        run: npm run build
+
+  docker-build:
+    name: Docker Container Build Check
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Verify Docker Compose Build
+        run: docker compose build
