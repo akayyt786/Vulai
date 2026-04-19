@@ -15,16 +15,33 @@ def generate_report(scan_id):
         # 1. Calculate risk score
         risk_score = calculate_risk_score(findings)
         
-        # 2. Get Executive Summary via LLM
+        # 2. Get Executive Summary and Attack Narrative via LLM
         findings_data = [
-            {"title": f.title, "severity": f.severity, "surface": f.surface}
+            {"id": str(f.id), "title": f.title, "severity": f.severity, "location": f.location, "description": f.description}
             for f in findings
         ]
         
-        llm = LLMClient()
-        prompt = f"Generate a 3-5 sentence executive summary of these security findings: {findings_data}"
-        raw_summary = llm.call_llm("You are a senior security auditor.", prompt)
+        narrative_prompt = f"""
+        You are a senior penetration tester writing an executive report.
+        Based on the following findings, provide:
+        1. A 3-sentence Executive Summary highlighting the most critical risks.
+        2. A 2-paragraph Attack Narrative explaining how an attacker could realistically pivot through these findings.
+           If there are chains (is_chained=True), emphasize those.
+
+        Findings:
+        {findings_data}
+
+        Respond in JSON:
+        {{"summary": "...", "narrative": "..."}}
+        """
         
+        llm = LLMClient()
+        raw_response = llm.call_llm("You are a professional security auditor.", narrative_prompt)
+        parsed = parse_llm_response(raw_response)
+        
+        summary = parsed.get("summary", "Executive summary could not be generated.")
+        narrative = parsed.get("narrative", "Attack narrative could not be generated.")
+
         # 3. Findings count
         counts = {
             "critical": findings.filter(severity='critical').count(),
@@ -38,8 +55,8 @@ def generate_report(scan_id):
         report, created = Report.objects.update_or_create(
             scan=scan,
             defaults={
-                "summary": raw_summary,
-                "attack_narrative": "Attack chains were identified and described in individual findings.",
+                "summary": summary,
+                "attack_narrative": narrative,
                 "findings_count": counts,
                 "surfaces_tested": scan.surfaces_covered,
                 "risk_score": risk_score,
