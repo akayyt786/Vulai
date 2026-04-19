@@ -28,7 +28,7 @@ ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
     go install github.com/ffuf/ffuf@latest && \
     go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
-    go install github.com/haithamaouati/dalfox@latest && \
+    go install github.com/hahwul/dalfox/v2@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@latest && \
     go install github.com/zricethezav/gitleaks/v8@latest && \
     go install github.com/s0md3v/Arjun@latest && \

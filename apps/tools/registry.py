@@ -150,7 +150,7 @@ TOOL_REGISTRY = {
     "dalfox": {
         "description": "All-in-one XSS scanner and parameter analyzer",
         "install_method": "go",
-        "install_command": "go install github.com/haithamaouati/dalfox@latest",
+        "install_command": "go install github.com/hahwul/dalfox/v2@latest",
         "check_command": "dalfox version",
         "applicable_to": ["url"],
         "layer": 3,
