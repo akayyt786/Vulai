@@ -11,4 +11,4 @@ class ExecutorTest(TestCase):
         
         result = run_tool("nmap", "http://example.com")
         self.assertEqual(result["exit_code"], 0)
-        self.assertIn("open_ports", result["parsed_output"])
+        self.assertIn("findings", result["parsed_output"])
