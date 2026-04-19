@@ -2,19 +2,32 @@ import json
 
 def parse(raw_output: str) -> dict:
     """
-    Parses nuclei output (assumes JSON format).
+    Parses nuclei JSON output into standardized findings.
     """
     findings = []
     for line in raw_output.splitlines():
+        if not line.strip(): continue
         try:
             data = json.loads(line)
+            info = data.get("info", {})
+            
+            # Map nuclei severity to our standard scale
+            severity_map = {
+                "critical": "critical",
+                "high": "high",
+                "medium": "medium",
+                "low": "low",
+                "info": "info"
+            }
+            raw_severity = info.get("severity", "info").lower()
+            severity = severity_map.get(raw_severity, "info")
+
             findings.append({
-                "template_id": data.get("template-id"),
-                "info": data.get("info", {}),
-                "type": data.get("type"),
-                "host": data.get("host"),
-                "matched_at": data.get("matched-at"),
-                "severity": data.get("info", {}).get("severity", "info")
+                "title": f"Nuclei: {data.get('template-id')}",
+                "description": info.get("description", info.get("name", "Vulnerability detected")),
+                "severity": severity,
+                "location": data.get("matched-at") or data.get("host", ""),
+                "evidence": f"Template: {data.get('template-id')} | Type: {data.get('type')}"
             })
         except json.JSONDecodeError:
             continue

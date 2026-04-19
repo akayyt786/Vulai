@@ -2,23 +2,33 @@ import re
 
 def parse(raw_output: str) -> dict:
     """
-    Parses nmap output to find open ports and services.
+    Parses raw Nmap terminal output into structured findings for the LLM.
     """
-    found = []
-    # Pattern for "80/tcp open  http"
-    pattern = re.compile(r"(\d+)/(tcp|udp)\s+open\s+(\S+)\s*(.*)")
+    findings = []
     
-    for line in raw_output.splitlines():
-        match = pattern.search(line)
-        if match:
-            found.append({
-                "port": match.group(1),
-                "protocol": match.group(2),
-                "service": match.group(3),
-                "version": match.group(4).strip()
-            })
+    # Regex to match open ports: "80/tcp open http Apache httpd 2.4.41"
+    port_pattern = re.compile(r'^(\d+)/([a-z]+)\s+open\s+([\w\-]+)\s*(.*)$', re.MULTILINE)
+    
+    for match in port_pattern.finditer(raw_output):
+        port = match.group(1)
+        protocol = match.group(2)
+        service = match.group(3)
+        version_info = match.group(4).strip()
+        
+        description = f"Service: {service}"
+        if version_info:
+            description += f" | Version: {version_info}"
             
+        findings.append({
+            "title": f"Open Port Discovered: {port}/{protocol}",
+            "description": description,
+            "severity": "info", # Open ports are info-level until vulnerable services are found
+            "location": f"Port {port}",
+            "evidence": match.group(0)
+        })
+
     return {
-        "open_ports": found,
-        "count": len(found)
+        "findings": findings,
+        "count": len(findings),
+        "raw_summary": f"Nmap discovered {len(findings)} open ports."
     }
