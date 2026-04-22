@@ -7,7 +7,7 @@ class Scan(models.Model):
     input_value = models.TextField()
     status = models.CharField(
         max_length=10,
-        choices=[('pending', 'pending'), ('running', 'running'), ('done', 'done'), ('failed', 'failed')],
+        choices=[('pending', 'pending'), ('running', 'running'), ('paused', 'paused'), ('done', 'done'), ('failed', 'failed')],
         default='pending'
     )
     current_layer = models.IntegerField(default=1)

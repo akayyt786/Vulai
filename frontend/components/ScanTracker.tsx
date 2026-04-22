@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Terminal, Shield, Activity, ChevronRight, Wifi, WifiOff } from 'lucide-react';
+import { Terminal, Shield, Activity, ChevronRight, Wifi, WifiOff, Pause, Play, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWebSocket } from '@/lib/useWebSocket';
+import { api } from '@/lib/api';
 
 interface Step {
   id: string;
@@ -16,6 +17,8 @@ interface Step {
 export const ScanTracker = ({ scanId }: { scanId: string }) => {
   const [steps, setSteps] = useState<Step[]>([]);
   const [statusText, setStatusText] = useState("AWAITING COMMAND INITIALIZATION...");
+  const [scanStatus, setScanStatus] = useState<string>("");
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const wsUrl = scanId ? `ws://${window.location.hostname}:8080/ws/scans/${scanId}/` : null;
   const { data, status } = useWebSocket(wsUrl);
 
@@ -24,6 +27,7 @@ export const ScanTracker = ({ scanId }: { scanId: string }) => {
       const message = data.data;
       if (message.type === 'status') {
         setStatusText(message.text);
+        if (message.status) setScanStatus(message.status);
       } else if (message.type === 'step') {
         setSteps(prev => [...prev, {
           id: message.id || Math.random().toString(),
@@ -38,13 +42,32 @@ export const ScanTracker = ({ scanId }: { scanId: string }) => {
     }
   }, [data]);
 
-  // Reset steps when scanId changes
   useEffect(() => {
     if (scanId) {
       setSteps([]);
       setStatusText("INITIALIZING ENGINE...");
+      setScanStatus("running");
     }
   }, [scanId]);
+
+  const handleTogglePause = async () => {
+    if (!scanId || isActionLoading) return;
+    
+    setIsActionLoading(true);
+    try {
+      if (scanStatus === 'paused') {
+        await api.resumeScan(scanId);
+        setScanStatus('running');
+      } else {
+        await api.pauseScan(scanId);
+        setScanStatus('paused');
+      }
+    } catch (err) {
+      console.error("Action failed:", err);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   return (
     <div className="tech-card p-6 h-full flex flex-col">
@@ -59,9 +82,24 @@ export const ScanTracker = ({ scanId }: { scanId: string }) => {
           ) : (
             <WifiOff size={12} className="text-error" />
           )}
-          <span className={status === 'open' ? "text-success" : "text-error"}>
-            {status === 'open' ? "AUTONOMOUS ORCHESTRATOR ONLINE" : "ENGINE DISCONNECTED"}
+          <span className={status === 'open' ? (scanStatus === 'paused' ? "text-warning" : "text-success") : "text-error"}>
+            {status === 'open' ? (scanStatus === 'paused' ? "ENGINE PAUSED" : "AUTONOMOUS ORCHESTRATOR ONLINE") : "ENGINE DISCONNECTED"}
           </span>
+          
+          {scanId && status === 'open' && (
+            <button 
+              onClick={handleTogglePause}
+              disabled={isActionLoading}
+              className="ml-4 p-1.5 rounded bg-border/50 hover:bg-border transition-colors text-white disabled:opacity-50"
+              title={scanStatus === 'paused' ? "Resume Scan" : "Pause Scan"}
+            >
+              {isActionLoading ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                scanStatus === 'paused' ? <Play size={12} fill="currentColor" /> : <Pause size={12} fill="currentColor" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 

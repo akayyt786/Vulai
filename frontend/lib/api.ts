@@ -89,5 +89,32 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/api/health/`);
     if (!response.ok) throw new Error('Health check failed');
     return response.json();
+  },
+
+  pauseScan: async (scanId: string) => {
+    const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/pause/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to pause scan');
+    return response.json();
+  },
+
+  resumeScan: async (scanId: string) => {
+    const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/resume/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to resume scan');
+    return response.json();
+  },
+
+  stopScan: async (scanId: string) => {
+    const response = await fetch(`${API_BASE_URL}/api/scans/${scanId}/stop/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to stop scan');
+    return response.json();
   }
 };

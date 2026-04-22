@@ -4,12 +4,13 @@ import React, { useState } from 'react';
 import { ScanTracker } from '@/components/ScanTracker';
 import { FindingsMatrix } from '@/components/FindingsMatrix';
 import { api } from '@/lib/api';
-import { Shield, Target, Plus, Search, HelpCircle, User, Loader2 } from 'lucide-react';
+import { Shield, Target, Plus, Search, HelpCircle, User, Loader2, Pause, Play, Square, Send } from 'lucide-react';
 
 export default function Dashboard() {
   const [activeScanId, setActiveScanId] = useState<string>("");
   const [target, setTarget] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [scanStatus, setScanStatus] = useState<string>("");
 
   const handleStartScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,11 +20,44 @@ export default function Dashboard() {
     try {
       const result = await api.createScan(target);
       setActiveScanId(result.scan_id);
+      setScanStatus("running");
     } catch (err) {
       console.error("Failed to start scan:", err);
       alert("Error initializing scan. Is the backend running?");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePause = async () => {
+    if (!activeScanId) return;
+    try {
+      await api.pauseScan(activeScanId);
+      setScanStatus("paused");
+    } catch (err) {
+      console.error("Pause failed:", err);
+    }
+  };
+
+  const handleResume = async () => {
+    if (!activeScanId) return;
+    try {
+      await api.resumeScan(activeScanId);
+      setScanStatus("running");
+    } catch (err) {
+      console.error("Resume failed:", err);
+    }
+  };
+
+  const handleStop = async () => {
+    if (!activeScanId) return;
+    try {
+      await api.stopScan(activeScanId);
+      setScanStatus("stopped");
+      setActiveScanId("");
+      setTarget("");
+    } catch (err) {
+      console.error("Stop failed:", err);
     }
   };
 
@@ -53,25 +87,58 @@ export default function Dashboard() {
             <p className="text-secondary text-xs mt-1 uppercase tracking-widest opacity-60">Phase 2 // Autonomous Security Discovery</p>
           </div>
           
-          <form onSubmit={handleStartScan} className="flex gap-2">
-            <div className="relative">
+          <form onSubmit={handleStartScan} className="flex gap-2 items-center">
+            <div className="relative group">
               <input 
                 type="text" 
                 placeholder="ENTER TARGET DOMAIN OR IP..."
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
-                className="bg-black border border-border px-4 py-2 rounded text-xs w-[300px] focus:outline-none focus:border-accent transition-colors font-mono"
-                disabled={isLoading}
+                className="bg-black border border-border px-4 py-2 rounded text-xs w-[300px] focus:outline-none focus:border-accent transition-all font-mono group-hover:border-accent/50"
+                disabled={isLoading || (activeScanId !== "" && scanStatus !== "stopped")}
               />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] text-secondary opacity-40 font-mono hidden md:block group-focus-within:hidden">
+                ENTER ↵
+              </div>
             </div>
-            <button 
-              type="submit"
-              disabled={isLoading || !target}
-              className="bg-primary text-black px-4 py-2 rounded text-[10px] font-bold uppercase hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              {isLoading ? "Initializing..." : "Initialize Scan"}
-            </button>
+            
+            {!activeScanId || scanStatus === "stopped" ? (
+              <button 
+                type="submit"
+                disabled={isLoading || !target}
+                className="bg-primary text-black px-6 py-2.5 rounded text-[11px] font-bold uppercase hover:bg-white transition-all flex items-center gap-2 active:scale-95"
+              >
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                {isLoading ? "Initializing..." : "Start Scan"}
+              </button>
+            ) : (
+              <div className="flex gap-3">
+                {scanStatus === 'paused' ? (
+                  <button 
+                    onClick={handleResume}
+                    type="button"
+                    className="bg-success text-black px-5 py-2.5 rounded text-[11px] font-bold uppercase hover:bg-success/80 transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                  >
+                    <Play size={16} fill="currentColor" /> Resume
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handlePause}
+                    type="button"
+                    className="bg-warning text-black px-5 py-2.5 rounded text-[11px] font-bold uppercase hover:bg-warning/80 transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(234,179,8,0.3)]"
+                  >
+                    <Pause size={16} fill="currentColor" /> Pause
+                  </button>
+                )}
+                <button 
+                  onClick={handleStop}
+                  type="button"
+                  className="bg-error text-white px-5 py-2.5 rounded text-[11px] font-bold uppercase hover:bg-error/80 transition-all flex items-center gap-2 active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                >
+                  <Square size={16} fill="currentColor" /> Stop
+                </button>
+              </div>
+            )}
           </form>
         </header>
 

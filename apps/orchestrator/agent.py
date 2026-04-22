@@ -22,12 +22,19 @@ class OrchestratorAgent:
         Main loop for the autonomous scan.
         """
         scan = Scan.objects.get(id=self.scan_id)
-        scan.status = 'running'
-        scan.save()
-        self._broadcast_status(scan, "Scanning initiated")
+        if scan.status != 'paused':
+            scan.status = 'running'
+            scan.save()
+            self._broadcast_status(scan, "Scanning initiated")
 
-        step_count = 0
+        step_count = scan.steps.count()
         while step_count < self.max_steps:
+            # Check for pause signal
+            scan.refresh_from_db()
+            if scan.status == 'paused':
+                self._broadcast_status(scan, "Scan paused by user.")
+                return
+
             try:
                 # 1. Build context
                 context = build_context(self.scan_id)

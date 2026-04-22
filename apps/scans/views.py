@@ -54,8 +54,8 @@ class ScanViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_202_ACCEPTED
             )
         except Exception as e:
-            if not isinstance(e, (status.HTTP_400_BAD_REQUEST, status.HTTP_429_TOO_MANY_REQUESTS)):
-                log_error("apps.scans.views", "ScanCreationError", str(e), request.data, exc=e)
+            # log_error is a custom utility, we should use standard exceptions for check
+            log_error("apps.scans.views", "ScanCreationError", str(e), request.data, exc=e)
             raise e
 
     @action(detail=True, methods=['get'])
@@ -81,6 +81,46 @@ class ScanViewSet(viewsets.ModelViewSet):
         except Exception as e:
             log_error("apps.scans.views", "ReportFetchError", str(e), {"scan_id": pk}, exc=e)
             return Response({"error": "Internal server error fetching report"}, status=500)
+
+    @action(detail=True, methods=['post'])
+    def pause(self, request, pk=None):
+        scan = self.get_object()
+        if scan.status != 'running':
+            return Response({"error": "Only running scans can be paused"}, status=status.HTTP_400_BAD_REQUEST)
+        scan.status = 'paused'
+        scan.save()
+        return Response({"status": "paused"})
+
+    @action(detail=True, methods=['post'])
+    def resume(self, request, pk=None):
+        scan = self.get_object()
+        if scan.status == 'running':
+            return Response({"status": "running"})
+        if scan.status != 'paused':
+            return Response({"error": f"Cannot resume scan in status: {scan.status}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        scan.status = 'running'
+        scan.save()
+        
+        # Dispatch scan task to pick up from where it left off
+        if settings.REDIS_URL:
+            run_scan_task.delay(str(scan.id))
+        else:
+            import threading
+            thread = threading.Thread(target=run_scan_task, args=(str(scan.id),))
+            thread.daemon = True
+            thread.start()
+            
+        return Response({"status": "running"})
+
+    @action(detail=True, methods=['post'])
+    def stop(self, request, pk=None):
+        scan = self.get_object()
+        if scan.status not in ['running', 'paused']:
+            return Response({"error": "Only running or paused scans can be stopped"}, status=status.HTTP_400_BAD_REQUEST)
+        scan.status = 'failed' # Or 'stopped' if we add it, but 'failed' is fine for abort
+        scan.save()
+        return Response({"status": "stopped"})
 
 class HealthCheckView(views.APIView):
     def get(self, request):
